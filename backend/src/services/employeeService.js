@@ -115,10 +115,29 @@ async function listAllEmployees(options = {}) {
   };
 }
 
+/**
+ * Deletes an employee by partition key (employeeId)
+ */
+async function deleteEmployeeById(employeeId) {
+  if (useRealDdb && docClient) {
+    const { DeleteCommand } = require('@aws-sdk/lib-dynamodb');
+    const command = new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: { employeeId }
+    });
+    await docClient.send(command);
+    return true;
+  }
+
+  localStore.delete(employeeId);
+  return true;
+}
+
 module.exports = {
   createEmployee,
   getEmployeeById,
   listAllEmployees,
+  deleteEmployeeById,
   TABLE_NAME,
   docClient,
   useRealDdb
