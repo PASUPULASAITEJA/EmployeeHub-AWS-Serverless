@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: EmployeeHub - Serverless Employee Registration and Management System
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 256
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref EmployeesTable
+        NODE_OPTIONS: '--enable-source-maps'
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
+
+Resources:
+  # ==========================================
+  # DynamoDB Table
+  # ==========================================
+  EmployeesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: EmployeeHub-Employees
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: employeeId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: employeeId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # ==========================================
+  # API Gateway REST API
+  # ==========================================
+  EmployeeApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      OpenApiVersion: '3.0.1'
+
+  # ==========================================
+  # Lambda Functions
+  # ==========================================
+  RegisterEmployeeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/
+      Handler: src/handlers/registerEmployee.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EmployeesTable
+      Events:
+        RegisterApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmployeeApi
+            Path: /employees
+            Method: post
+
+  ListEmployeesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/
+      Handler: src/handlers/listEmployees.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EmployeesTable
+      Events:
+        ListApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmployeeApi
+            Path: /employees
+            Method: get
+
+  GetEmployeeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/
+      Handler: src/handlers/getEmployee.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EmployeesTable
+      Events:
+        GetApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmployeeApi
+            Path: /employees/{id}
+            Method: get
+
+  # ==========================================
+  # S3 Bucket for Frontend Web Hosting
+  # ==========================================
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'employeehub-web-${AWS::AccountId}-${AWS::Region}'
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+
+Outputs:
+  ApiUrl:
+    Description: 'API Gateway Endpoint URL for EmployeeHub'
+    Value: !Sub 'https://${EmployeeApi}.execute-api.${AWS::Region}.amazonaws.com/prod/'
+
+  EmployeesEndpoint:
+    Description: 'Employees Resource Endpoint'
+    Value: !Sub 'https://${EmployeeApi}.execute-api.${AWS::Region}.amazonaws.com/prod/employees'
+
+  FrontendWebsiteURL:
+    Description: 'S3 Static Website Hosting URL'
+    Value: !GetAtt FrontendBucket.WebsiteURL
+
+  DynamoDBTableName:
+    Description: 'DynamoDB Table Name'
+    Value: !Ref EmployeesTable

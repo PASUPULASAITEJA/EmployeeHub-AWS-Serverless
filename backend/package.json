@@ -1,0 +1,17 @@
+{
+  "name": "employeehub-backend",
+  "version": "1.0.0",
+  "description": "Serverless Employee Registration Backend for AWS Lambda & DynamoDB",
+  "main": "local-server.js",
+  "scripts": {
+    "start": "node local-server.js",
+    "dev": "node local-server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.500.0",
+    "@aws-sdk/lib-dynamodb": "^3.500.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

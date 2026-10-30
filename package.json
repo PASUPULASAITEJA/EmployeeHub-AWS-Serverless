@@ -1,0 +1,19 @@
+{
+  "name": "employeehub",
+  "version": "1.0.0",
+  "description": "EmployeeHub - Serverless Employee Management System",
+  "scripts": {
+    "start": "node backend/local-server.js",
+    "dev": "node backend/local-server.js"
+  },
+  "keywords": [
+    "aws",
+    "serverless",
+    "lambda",
+    "dynamodb",
+    "api-gateway",
+    "employee-management"
+  ],
+  "author": "EmployeeHub Team",
+  "license": "ISC"
+}
