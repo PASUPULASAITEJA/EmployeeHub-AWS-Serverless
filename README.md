@@ -208,9 +208,9 @@ Your serverless application is now **live on the internet** at your `FrontendWeb
 ```json
 {
   "employeeId": "EMP-1001",
-  "fullName": "Priya Sharma",
-  "email": "priya.sharma@example.com",
-  "phone": "+91 9876543210",
+  "fullName": "Sai Teja",
+  "email": "sai.teja1112@gmail.com",
+  "phone": "+91 9********0",
   "department": "IT",
   "jobRole": "Senior Cloud Engineer",
   "dateOfJoining": "2024-01-15",
