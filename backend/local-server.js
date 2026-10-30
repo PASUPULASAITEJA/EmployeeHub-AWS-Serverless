@@ -3,7 +3,6 @@
  * Simulates AWS API Gateway & Lambda handlers locally on port 3001
  * Serves the frontend application at http://localhost:3001
  */
-
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
