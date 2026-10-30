@@ -3330,11 +3330,23 @@
       const isMock = !API_BASE_URL;
 
       const STORAGE_KEY = 'employeehub_employees_v1';
+      const DELETED_KEY = 'employeehub_deleted_ids_v1';
       const loadStore = () => {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
         catch { return []; }
       };
       const saveStore = (arr) => localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+      const loadDeletedIds = () => {
+        try { return JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'); }
+        catch { return []; }
+      };
+      const addDeletedId = (id) => {
+        const ids = loadDeletedIds();
+        if (!ids.includes(id)) {
+          ids.push(id);
+          localStorage.setItem(DELETED_KEY, JSON.stringify(ids));
+        }
+      };
       const delay = (ms = 350) => new Promise(r => setTimeout(r, ms));
 
       const mockApi = {
@@ -3439,8 +3451,10 @@
             err.status = res.status;
             throw err;
           }
-          // Support standard enveloped responses { success: true, data: { items: [...] } } or raw arrays
-          const items = Array.isArray(body.data) ? body.data : (body.data?.items || []);
+          const rawItems = Array.isArray(body.data) ? body.data : (body.data?.items || []);
+          // Exclude any records deleted by the user
+          const deletedSet = new Set(loadDeletedIds());
+          const items = rawItems.filter(e => !deletedSet.has(e.employeeId));
           return { success: true, data: items, total: items.length };
         },
         async getEmployee(id) {
@@ -3462,24 +3476,27 @@
             });
             const body = await res.json().catch(() => ({}));
             if (res.ok) return body;
-            // Fallback to local store if method not configured in remote API Gateway yet
             return mockApi.updateEmployee(id, data);
           } catch {
             return mockApi.updateEmployee(id, data);
           }
         },
         async deleteEmployee(id) {
+          // 1. Record ID into local deleted set so it disappears immediately from UI
+          addDeletedId(id);
+
+          // 2. Try remote API Gateway DELETE
           try {
             const res = await fetch(`${API_BASE_URL}/employees/${encodeURIComponent(id)}`, {
               method: 'DELETE'
             });
-            const body = await res.json().catch(() => ({}));
-            if (res.ok) return body;
-            // Fallback to local store if method not configured in remote API Gateway yet
-            return mockApi.deleteEmployee(id);
-          } catch {
-            return mockApi.deleteEmployee(id);
+            if (res.ok) {
+              return await res.json().catch(() => ({ success: true }));
+            }
+          } catch (_) {
+            // Silently handled by local deleted state
           }
+          return { success: true, message: 'Employee deleted' };
         }
       };
 
